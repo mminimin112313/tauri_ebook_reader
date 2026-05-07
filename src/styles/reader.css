@@ -92,7 +92,7 @@
   flex: 1;
   overflow: hidden;
   position: relative;
-  --reader-page-h: calc(100vh - 220px);
+  --reader-page-h: calc(100vh - 96px);
 }
 
 .reader-page-turn {

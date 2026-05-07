@@ -15,7 +15,7 @@ export function HybridCanvasPage({ page, settings }) {
       const bounds = canvas.parentElement?.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(320, Math.round(bounds?.width || window.innerWidth - 80));
-      const height = Math.max(260, Math.round(bounds?.height || window.innerHeight - 220));
+      const height = Math.max(260, Math.round(bounds?.height || window.innerHeight - 96));
 
       if (
         lastSizeRef.current.width !== width

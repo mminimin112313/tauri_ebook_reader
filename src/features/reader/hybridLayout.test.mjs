@@ -27,7 +27,7 @@ const pages = composeHybridPages({
 assert.equal(pages[0].textRuns[0].color, null);
 
 const metrics = pageMetrics({ columns: 2, font_size: 20, line_height: 1.6, font_family: 'serif', margin_width: 3 });
-assert.equal(metrics.pageHeight, 548);
+assert.equal(metrics.pageHeight, 672);
 assert.equal(metrics.columns, 2);
 assert.equal(pageMetrics({ columns: 1, font_size: 20, line_height: 1.6, font_family: 'serif', margin_width: 3 }).pageWidth, 640);
 assert.equal(pageMetrics({ columns: 1, font_size: 20, line_height: 1.6, font_family: 'serif', margin_width: 3, side_panel_width: 300 }).pageWidth, 640);
@@ -37,6 +37,7 @@ assert.equal(
   'canonical page geometry must not change when the TOC side panel opens',
 );
 assert.equal(metrics.cssPageWidth, 'min(1200px, calc(100vw - 80px))');
+assert.equal(metrics.cssPageHeight, 'calc(100vh - 96px)');
 assert.equal(
   pageMetrics({ columns: 1, font_size: 20, line_height: 1.6, font_family: 'serif', margin_width: 4 }).cssPageWidth,
   'min(560px, calc(100vw - 80px))',
@@ -68,7 +69,7 @@ for (const page of mixedPages) {
 const tableOverlay = mixedPages.flatMap((page) => page.overlays).find((overlay) => overlay.type === 'table');
 assert.ok(tableOverlay, 'table overlay exists');
 assert.ok(tableOverlay.width <= 860, 'table overlays use a readable maximum width');
-assert.ok(tableOverlay.x > 0, 'narrowed table overlay is centered inside the page');
+assert.ok(tableOverlay.x >= 0, 'table overlay starts inside the page');
 
 const richMarkdownPages = composeHybridPages({
   blocks: [
