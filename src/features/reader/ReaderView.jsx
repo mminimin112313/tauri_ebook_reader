@@ -387,6 +387,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
             book={book}
             settings={readerSettings}
             jumpTo={jumpTo}
+            annotations={annotations}
             onProgress={handleProgress}
             onPageInfo={handlePageInfo}
             onToc={handleReaderToc}
@@ -413,7 +414,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           <ComicReader ref={readerRef} book={book} settings={readerSettings} onProgress={handleProgress} onPageInfo={handlePageInfo} />
         )}
         {!isEpub(fileType) && !isPdf(fileType) && !isComic(fileType) && (
-          <TextReader ref={readerRef} book={book} settings={readerSettings} jumpTo={jumpTo} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
+          <TextReader ref={readerRef} book={book} settings={readerSettings} jumpTo={jumpTo} annotations={annotations} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
         )}
       </div>
 

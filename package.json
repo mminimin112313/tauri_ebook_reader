@@ -9,7 +9,7 @@
     "build": "vite build",
     "tauri:build": "tauri build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "test:page-position": "node src/features/reader/pagePosition.test.mjs && node src/features/reader/hybridLayout.test.mjs && node src/features/reader/readerToc.test.mjs && node src/features/reader/readerPaging.test.mjs && node src/features/reader/readerProgress.test.mjs && node src/features/reader/readerAnnotations.test.mjs && node src/features/reader/useNativePageControls.test.mjs && node src/features/library/libraryMetadata.test.mjs && node src/state/libraryAccess.test.mjs",
+    "test:page-position": "node src/features/reader/pagePosition.test.mjs && node src/features/reader/hybridLayout.test.mjs && node src/features/reader/hybridAnnotations.test.mjs && node src/features/reader/readerToc.test.mjs && node src/features/reader/readerPaging.test.mjs && node src/features/reader/readerProgress.test.mjs && node src/features/reader/readerAnnotations.test.mjs && node src/features/reader/useNativePageControls.test.mjs && node src/features/library/libraryMetadata.test.mjs && node src/state/libraryAccess.test.mjs",
     "check": "npm run test:page-position && npm run build && cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "devDependencies": {

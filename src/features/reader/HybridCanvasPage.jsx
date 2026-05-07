@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hybridPageCssWidth } from './readerGeometry.js';
+import { annotationMarksForPage } from './hybridAnnotations.mjs';
 
-export function HybridCanvasPage({ page, settings }) {
+export function HybridCanvasPage({ page, settings, annotations = [] }) {
   const canvasRef = useRef(null);
   const lastSizeRef = useRef({ width: 0, height: 0, dpr: 0 });
   const [expandedOverlay, setExpandedOverlay] = useState(null);
@@ -36,6 +37,19 @@ export function HybridCanvasPage({ page, settings }) {
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       const themeInk = getReaderThemeValue(canvas, '--r-ink', '#2A2A2A');
+      const marks = annotationMarksForPage({
+        page,
+        annotations,
+        measureText: (text, font) => {
+          const previousFont = ctx.font;
+          if (font) ctx.font = font;
+          const width = ctx.measureText(text).width;
+          ctx.font = previousFont;
+          return width;
+        },
+      });
+      drawAnnotationRects(ctx, marks.rects);
+      drawAnnotationBadges(ctx, marks.badges, width);
       let activeFont = '';
       let activeFill = '';
 
@@ -54,7 +68,7 @@ export function HybridCanvasPage({ page, settings }) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [page, settings.theme, settings.font_family, settings.font_size, settings.line_height]);
+  }, [annotations, page, settings.theme, settings.font_family, settings.font_size, settings.line_height]);
 
   return (
     <div className="hybrid-page" style={{ '--hybrid-page-w': pageWidth }}>
@@ -103,6 +117,69 @@ export function HybridCanvasPage({ page, settings }) {
       )}
     </div>
   );
+}
+
+function drawAnnotationRects(ctx, rects) {
+  for (const rect of rects || []) {
+    const fill = annotationColor(rect.color, 0.28);
+    const stroke = annotationColor(rect.color, 0.5);
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1;
+    roundedRect(ctx, rect.x - 3, rect.y - 1, rect.width + 6, rect.height + 2, 5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawAnnotationBadges(ctx, badges, pageWidth) {
+  for (const [index, badge] of (badges || []).entries()) {
+    const size = 20;
+    const x = pageWidth - 30;
+    const y = 18 + index * 26;
+    ctx.save();
+    ctx.fillStyle = annotationColor(badge.color, 0.88);
+    roundedRect(ctx, x, y, size, size, 5);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.86)';
+    if (badge.kind === 'bookmark') {
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + 4);
+      ctx.lineTo(x + 14, y + 4);
+      ctx.lineTo(x + 14, y + 16);
+      ctx.lineTo(x + 10, y + 13);
+      ctx.lineTo(x + 6, y + 16);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      roundedRect(ctx, x + 5, y + 8, 10, 4, 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function annotationColor(color, alpha) {
+  const palette = {
+    blue: `rgba(117, 159, 255, ${alpha})`,
+    green: `rgba(103, 224, 143, ${alpha})`,
+    pink: `rgba(255, 155, 207, ${alpha})`,
+    yellow: `rgba(255, 209, 102, ${alpha})`,
+  };
+  return palette[color] || palette.yellow;
 }
 
 function HybridOverlayContent({ overlay, settings }) {
