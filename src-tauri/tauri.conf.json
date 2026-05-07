@@ -1,0 +1,66 @@
+{
+  "productName": "Libris Reader",
+  "version": "0.1.0",
+  "identifier": "com.librisreader.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Libris Reader",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "center": true,
+        "titleBarStyle": "Overlay"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "entitlements": "Entitlements.plist"
+    },
+    "fileAssociations": [
+      {
+        "name": "eBook",
+        "ext": ["epub", "fb2", "mobi", "azw", "azw3", "prc", "chm", "umd"],
+        "role": "Viewer"
+      },
+      {
+        "name": "Document",
+        "ext": ["pdf", "txt", "html", "htm", "md", "markdown", "rtf", "docx", "odt"],
+        "role": "Viewer"
+      },
+      {
+        "name": "Comic",
+        "ext": ["cbz", "cbr"],
+        "role": "Viewer"
+      }
+    ]
+  }
+}

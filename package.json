@@ -1,0 +1,30 @@
+{
+  "name": "libris-reader",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "vite --host 127.0.0.1 --port 1420",
+    "tauri:dev": "tauri dev",
+    "build": "vite build",
+    "tauri:build": "tauri build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test:page-position": "node src/features/reader/pagePosition.test.mjs && node src/features/reader/hybridLayout.test.mjs && node src/features/reader/readerToc.test.mjs && node src/features/reader/readerPaging.test.mjs && node src/features/reader/readerProgress.test.mjs && node src/features/reader/useNativePageControls.test.mjs && node src/features/library/libraryMetadata.test.mjs && node src/state/libraryAccess.test.mjs",
+    "check": "npm run test:page-position && npm run build && cargo check --manifest-path src-tauri/Cargo.toml"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.6",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "lucide-react": "^1.14.0",
+    "mermaid": "^11.14.0",
+    "pdfjs-dist": "^5.7.284",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}
