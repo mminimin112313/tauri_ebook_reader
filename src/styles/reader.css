@@ -201,6 +201,8 @@
   display: block;
   width: 100%;
   height: 100%;
+  cursor: text;
+  user-select: none;
 }
 .hybrid-overlay-layer {
   position: absolute;
@@ -1212,6 +1214,7 @@
   gap: 10px;
   padding: 12px 10px 12px 12px;
   text-align: left;
+  cursor: pointer;
 }
 .annotation-color-dot {
   width: 10px;
@@ -1262,6 +1265,21 @@
 .annotation-remove:hover {
   color: #ffe1e1;
   background: rgba(255,72,72,.14);
+}
+.annotation-name-input {
+  width: 100%;
+  height: 30px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.92);
+  padding: 0 8px;
+  font-size: 13px;
+  outline: none;
+}
+.annotation-name-input:focus {
+  border-color: rgba(255,209,102,.72);
+  box-shadow: 0 0 0 3px rgba(255,209,102,.15);
 }
 
 /* ── Settings Panel ─────────────────────────────────── */
@@ -1470,6 +1488,97 @@
 .settings-footer {
   padding: 16px 22px;
   border-top: 1px solid var(--outline-variant);
+}
+
+/* ── Unified reader side panels ─────────────────────── */
+.toc-panel,
+.annotation-panel,
+.settings-panel {
+  background: rgba(25,25,24,.86);
+  color: #f6f3ec;
+  backdrop-filter: blur(24px) saturate(1.14);
+  border-left: 1px solid rgba(255,255,255,.14);
+  box-shadow: -10px 0 32px rgba(0,0,0,.2);
+}
+.toc-panel,
+.toc-panel-docked {
+  width: min(340px, calc(100vw - 24px));
+}
+.toc-dock {
+  width: min(340px, calc(100vw - 24px));
+}
+.settings-panel {
+  width: min(380px, calc(100vw - 24px));
+}
+.toc-header,
+.annotation-header,
+.settings-header,
+.settings-footer {
+  border-color: rgba(255,255,255,.12);
+}
+.toc-header h3,
+.annotation-header h3,
+.settings-header h2 {
+  color: #f6f3ec;
+}
+.toc-body,
+.annotation-body,
+.settings-body {
+  scrollbar-color: rgba(255,255,255,.24) transparent;
+}
+.toc-entry {
+  color: rgba(255,255,255,.62);
+}
+.toc-entry:hover {
+  background: rgba(255,255,255,.09);
+  color: #fff;
+}
+.toc-entry.active {
+  background: rgba(255,209,102,.16);
+  color: #fff;
+}
+.toc-entry-num,
+.toc-entry.active .toc-entry-num {
+  color: rgba(255,255,255,.68);
+}
+.settings-section-label,
+.settings-val,
+.theme-cell.active span {
+  color: #ffd166;
+}
+.settings-label,
+.toggle-item-label,
+.s-seg-btn.active {
+  color: #f6f3ec;
+}
+.toggle-item-sub,
+.theme-cell span,
+.slider-wrap .ms,
+.s-seg-btn {
+  color: rgba(255,255,255,.58);
+}
+.s-seg-group,
+.toggle-item {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.1);
+}
+.s-seg-btn.active {
+  background: rgba(255,255,255,.15);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 16px rgba(0,0,0,.14);
+}
+.s-seg-btn:hover:not(.active),
+.theme-cell:hover {
+  color: #fff;
+  background: rgba(255,255,255,.1);
+}
+.s-range {
+  background: rgba(255,255,255,.18);
+}
+.theme-swatch {
+  border-color: rgba(255,255,255,.22);
+}
+.theme-cell.active {
+  border-color: #ffd166;
 }
 
 /* ── Loading ─────────────────────────────────────────── */

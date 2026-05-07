@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hybridPageCssWidth } from './readerGeometry.js';
-import { annotationMarksForPage } from './hybridAnnotations.mjs';
+import { annotationMarksForPage, selectionFromCanvasDrag } from './hybridAnnotations.mjs';
 
-export function HybridCanvasPage({ page, settings, annotations = [] }) {
+export function HybridCanvasPage({ page, settings, annotations = [], selection = null, onTextSelectionChange }) {
   const canvasRef = useRef(null);
+  const dragStartRef = useRef(null);
+  const draggedRef = useRef(false);
   const lastSizeRef = useRef({ width: 0, height: 0, dpr: 0 });
   const [expandedOverlay, setExpandedOverlay] = useState(null);
   const pageWidth = useMemo(() => hybridPageCssWidth(settings), [settings.columns, settings.margin_width]);
+  const measureSelectionText = useMemo(() => {
+    const canvas = typeof document === 'undefined' ? null : document.createElement('canvas');
+    const ctx = canvas?.getContext?.('2d');
+    return (text, font) => {
+      if (!ctx) return String(text || '').length * 8;
+      if (font) ctx.font = font;
+      return ctx.measureText(text).width;
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -49,6 +60,7 @@ export function HybridCanvasPage({ page, settings, annotations = [] }) {
         },
       });
       drawAnnotationRects(ctx, marks.rects);
+      drawAnnotationRects(ctx, selection?.rects || []);
       drawAnnotationBadges(ctx, marks.badges, width);
       let activeFont = '';
       let activeFill = '';
@@ -68,11 +80,85 @@ export function HybridCanvasPage({ page, settings, annotations = [] }) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [annotations, page, settings.theme, settings.font_family, settings.font_size, settings.line_height]);
+  }, [annotations, page, selection, settings.theme, settings.font_family, settings.font_size, settings.line_height]);
+
+  useEffect(() => {
+    onTextSelectionChange?.(null);
+  }, [onTextSelectionChange, page?.global_index]);
+
+  const pointFromEvent = (event) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  const updateSelection = (start, end) => {
+    const nextSelection = selectionFromCanvasDrag({
+      page,
+      start,
+      end,
+      measureText: measureSelectionText,
+    });
+    onTextSelectionChange?.(nextSelection.quote ? nextSelection : null);
+  };
+
+  const handlePointerDown = (event) => {
+    if (event.button !== 0) return;
+    const point = pointFromEvent(event);
+    if (!point) return;
+    dragStartRef.current = point;
+    draggedRef.current = false;
+    canvasRef.current?.setPointerCapture?.(event.pointerId);
+    onTextSelectionChange?.(null);
+  };
+
+  const handlePointerMove = (event) => {
+    if (!dragStartRef.current) return;
+    const point = pointFromEvent(event);
+    if (!point) return;
+    const dx = Math.abs(point.x - dragStartRef.current.x);
+    const dy = Math.abs(point.y - dragStartRef.current.y);
+    if (dx < 4 && dy < 4) return;
+    draggedRef.current = true;
+    event.preventDefault();
+    updateSelection(dragStartRef.current, point);
+  };
+
+  const handlePointerUp = (event) => {
+    if (!dragStartRef.current) return;
+    const point = pointFromEvent(event);
+    if (point && draggedRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      updateSelection(dragStartRef.current, point);
+    }
+    dragStartRef.current = null;
+    canvasRef.current?.releasePointerCapture?.(event.pointerId);
+  };
+
+  const handleClick = (event) => {
+    if (draggedRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      draggedRef.current = false;
+    }
+  };
 
   return (
     <div className="hybrid-page" style={{ '--hybrid-page-w': pageWidth }}>
-      <canvas ref={canvasRef} className="hybrid-page-canvas" aria-label={page?.title || 'Reader page'} />
+      <canvas
+        ref={canvasRef}
+        className="hybrid-page-canvas"
+        aria-label={page?.title || 'Reader page'}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => { dragStartRef.current = null; }}
+        onClick={handleClick}
+      />
       <div className="hybrid-overlay-layer">
         {(page?.overlays || []).map((overlay, index) => (
           <div

@@ -543,6 +543,15 @@ async fn remove_annotation(annotation_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn rename_annotation(
+    annotation_id: String,
+    note: String,
+) -> Result<ReaderAnnotation, String> {
+    let mut store = AnnotationStore::load();
+    store.rename(&annotation_id, note)
+}
+
+#[tauri::command]
 async fn toggle_favorite(book_id: String) -> Result<bool, String> {
     let mut lib = Library::load();
     Ok(lib.toggle_favorite(&book_id))
@@ -1027,6 +1036,7 @@ pub fn run() {
             get_annotations,
             add_annotation,
             remove_annotation,
+            rename_annotation,
             toggle_favorite,
             update_book_metadata,
             remove_book,

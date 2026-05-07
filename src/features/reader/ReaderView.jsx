@@ -39,6 +39,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   const [annotationTab, setAnnotationTab] = useState('highlights');
   const [annotations, setAnnotations] = useState([]);
   const [annotationError, setAnnotationError] = useState('');
+  const [canvasSelection, setCanvasSelection] = useState(null);
   const [hudVisible,   setHudVisible]   = useState(false);
   const [toc,          setToc]          = useState([]);
   const [jumpTo,       setJumpTo]       = useState(null);
@@ -86,6 +87,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   useEffect(() => {
     setAnnotations([]);
     setAnnotationError('');
+    setCanvasSelection(null);
     loadAnnotations();
   }, [loadAnnotations]);
 
@@ -236,7 +238,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   }, [annotationContext]);
 
   const handleAddHighlight = useCallback(() => {
-    const quote = currentSelectionText();
+    const quote = currentSelectionText() || canvasSelection?.quote || '';
     const pageNumber = (pageDisplay?.index ?? 0) + 1;
     setAnnotationError('');
     call('add_annotation', {
@@ -248,12 +250,13 @@ export function ReaderView({ book, backToLibrary, refresh }) {
     })
       .then((annotation) => {
         window.getSelection?.()?.removeAllRanges?.();
+        setCanvasSelection(null);
         setAnnotations((items) => [...items, annotation].sort((a, b) => a.pageIndex - b.pageIndex || a.createdAt - b.createdAt));
         setAnnotationTab('highlights');
         setAnnotationsOpen(true);
       })
       .catch((error) => setAnnotationError(error?.message || 'Could not save highlight.'));
-  }, [annotationContext, currentSelectionText, pageDisplay?.index]);
+  }, [annotationContext, canvasSelection?.quote, currentSelectionText, pageDisplay?.index]);
 
   const handleAnnotationJump = useCallback((annotation) => {
     if (Number.isFinite(annotation?.pageIndex)) {
@@ -269,6 +272,19 @@ export function ReaderView({ book, backToLibrary, refresh }) {
         setAnnotationError('');
       })
       .catch((error) => setAnnotationError(error?.message || 'Could not remove annotation.'));
+  }, []);
+
+  const handleRenameAnnotation = useCallback((annotation, note) => {
+    return call('rename_annotation', { annotationId: annotation.id, note })
+      .then((renamed) => {
+        setAnnotations((items) => items.map((item) => (item.id === renamed.id ? renamed : item)));
+        setAnnotationError('');
+        return renamed;
+      })
+      .catch((error) => {
+        setAnnotationError(error?.message || 'Could not rename bookmark.');
+        throw error;
+      });
   }, []);
 
   const handleCanvasClick = useCallback((e) => {
@@ -388,6 +404,8 @@ export function ReaderView({ book, backToLibrary, refresh }) {
             settings={readerSettings}
             jumpTo={jumpTo}
             annotations={annotations}
+            selection={canvasSelection}
+            onTextSelectionChange={setCanvasSelection}
             onProgress={handleProgress}
             onPageInfo={handlePageInfo}
             onToc={handleReaderToc}
@@ -414,7 +432,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           <ComicReader ref={readerRef} book={book} settings={readerSettings} onProgress={handleProgress} onPageInfo={handlePageInfo} />
         )}
         {!isEpub(fileType) && !isPdf(fileType) && !isComic(fileType) && (
-          <TextReader ref={readerRef} book={book} settings={readerSettings} jumpTo={jumpTo} annotations={annotations} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
+          <TextReader ref={readerRef} book={book} settings={readerSettings} jumpTo={jumpTo} annotations={annotations} selection={canvasSelection} onTextSelectionChange={setCanvasSelection} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
         )}
       </div>
 
@@ -545,6 +563,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           onTabChange={setAnnotationTab}
           onJump={handleAnnotationJump}
           onRemove={handleRemoveAnnotation}
+          onRename={handleRenameAnnotation}
           onClose={() => setAnnotationsOpen(false)}
           error={annotationError}
           docked

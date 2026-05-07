@@ -108,6 +108,37 @@ impl AnnotationStore {
         }
         removed
     }
+
+    pub fn rename(
+        &mut self,
+        annotation_id: &str,
+        note: String,
+    ) -> Result<ReaderAnnotation, String> {
+        let annotation = self.rename_without_saving(annotation_id, &note)?;
+        self.save();
+        Ok(annotation)
+    }
+
+    fn rename_without_saving(
+        &mut self,
+        annotation_id: &str,
+        note: &str,
+    ) -> Result<ReaderAnnotation, String> {
+        let clean_note = note.trim();
+        if clean_note.len() > 160 {
+            return Err("Bookmark name is too long.".to_string());
+        }
+        let annotation = self
+            .items
+            .iter_mut()
+            .find(|item| item.id == annotation_id)
+            .ok_or_else(|| "Annotation not found.".to_string())?;
+        if annotation.kind != "bookmark" {
+            return Err("Only bookmarks can be renamed.".to_string());
+        }
+        annotation.note = clean_note.to_string();
+        Ok(annotation.clone())
+    }
 }
 
 fn validate_annotation_input(input: &AnnotationInput) -> Result<(), String> {
@@ -190,5 +221,21 @@ mod tests {
         let err = store.add_without_saving(item).unwrap_err();
 
         assert!(err.contains("Highlight requires"));
+    }
+
+    #[test]
+    fn bookmark_note_can_be_renamed_without_touching_quote() {
+        let mut store = AnnotationStore::default();
+        let bookmark = store
+            .add_without_saving(input("bookmark", "book-a", 2))
+            .unwrap();
+
+        let renamed = store
+            .rename_without_saving(&bookmark.id, "Important page")
+            .unwrap();
+
+        assert_eq!(renamed.note, "Important page");
+        assert_eq!(renamed.quote, "");
+        assert_eq!(store.by_book("book-a")[0].note, "Important page");
     }
 }

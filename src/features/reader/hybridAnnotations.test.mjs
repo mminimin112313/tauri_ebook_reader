@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { annotationMarksForPage } from './hybridAnnotations.mjs';
+import { annotationMarksForPage, selectionFromCanvasDrag } from './hybridAnnotations.mjs';
 
 const page = {
   global_index: 2,
@@ -48,5 +48,31 @@ const splitQuote = annotationMarksForPage({
 assert.equal(splitQuote.rects.length, 2);
 assert.equal(splitQuote.rects[0].width, 190);
 assert.equal(splitQuote.rects[1].width, 100);
+
+const selection = selectionFromCanvasDrag({
+  page,
+  start: { x: 82, y: 72 },
+  end: { x: 122, y: 72 },
+  measureText,
+});
+assert.equal(selection.quote, 'quick');
+assert.deepEqual(selection.rects, [
+  {
+    x: 80,
+    y: 62.4,
+    width: 50,
+    height: 22.799999999999997,
+    color: 'green',
+  },
+]);
+
+const multiLineSelection = selectionFromCanvasDrag({
+  page,
+  start: { x: 40, y: 72 },
+  end: { x: 140, y: 104 },
+  measureText,
+});
+assert.equal(multiLineSelection.quote, 'The quick brown fox jumps over');
+assert.equal(multiLineSelection.rects.length, 2);
 
 console.log('hybridAnnotations tests passed');

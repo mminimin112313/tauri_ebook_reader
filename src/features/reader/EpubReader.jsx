@@ -8,7 +8,7 @@ import { pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
 import { attachPageTargetsToToc, tocFromLayoutBlocks } from './readerToc';
 import { readerCssVars } from './readerGeometry.js';
 
-export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpTo, annotations = [], onProgress, onPageInfo, onToc }, ref) {
+export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpTo, annotations = [], selection = null, onTextSelectionChange, onProgress, onPageInfo, onToc }, ref) {
   const [chapters, setChapters] = useState([]);
   const [total, setTotal]       = useState(0);
   const [loading, setLoading]   = useState(true);
@@ -421,7 +421,13 @@ export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpT
           </div>
         )}
         {!loading && page && (
-          <HybridCanvasPage page={page} settings={settings} annotations={annotations} />
+          <HybridCanvasPage
+            page={page}
+            settings={settings}
+            annotations={annotations}
+            selection={selection}
+            onTextSelectionChange={onTextSelectionChange}
+          />
         )}
         {!loading && !page && (
           <div className="unsupported-view">

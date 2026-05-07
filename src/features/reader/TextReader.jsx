@@ -8,7 +8,7 @@ import { pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
 import { attachPageTargetsToToc, tocFromHtml, tocFromLayoutBlocks } from './readerToc';
 import { quotedReaderFontFamily, readingMeasureWidth } from './readerGeometry.js';
 
-export const TextReader = forwardRef(function TextReader({ book, settings, jumpTo, annotations = [], onProgress, onPageInfo, onToc }, ref) {
+export const TextReader = forwardRef(function TextReader({ book, settings, jumpTo, annotations = [], selection = null, onTextSelectionChange, onProgress, onPageInfo, onToc }, ref) {
   const [html,    setHtml]    = useState('');
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
@@ -305,7 +305,13 @@ export const TextReader = forwardRef(function TextReader({ book, settings, jumpT
         style={{ filter: `brightness(${(settings.brightness || 90) / 100})` }}
       >
         {page && (
-          <HybridCanvasPage page={page} settings={settings} annotations={annotations} />
+          <HybridCanvasPage
+            page={page}
+            settings={settings}
+            annotations={annotations}
+            selection={selection}
+            onTextSelectionChange={onTextSelectionChange}
+          />
         )}
         {!page && (
           <div className="unsupported-view">

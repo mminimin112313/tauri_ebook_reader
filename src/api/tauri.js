@@ -176,6 +176,7 @@ async function mockCall(command, args = {}) {
     get_annotations: [],
     add_annotation: null,
     remove_annotation: null,
+    rename_annotation: null,
     toggle_favorite: null,
     update_book_metadata: null,
     remove_book: null,
@@ -231,6 +232,16 @@ async function mockCall(command, args = {}) {
   if (command === 'remove_annotation') {
     mockAnnotations = mockAnnotations.filter((annotation) => annotation.id !== args.annotationId);
     return null;
+  }
+  if (command === 'rename_annotation') {
+    let renamed = null;
+    mockAnnotations = mockAnnotations.map((annotation) => {
+      if (annotation.id !== args.annotationId) return annotation;
+      renamed = { ...annotation, note: String(args.note || '').trim() };
+      return renamed;
+    });
+    if (!renamed) throw new Error('Annotation not found.');
+    return renamed;
   }
   if (command === 'update_book_metadata') {
     const nextTags = Array.isArray(args.tags) ? args.tags : [];
