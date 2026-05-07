@@ -32,6 +32,7 @@ export async function pickReadableDirectory() {
 
 let mockLibrary = [];
 let mockAccess = { granted_roots: [] };
+let mockAnnotations = [];
 
 function mockBook(overrides = {}) {
   return {
@@ -172,6 +173,9 @@ async function mockCall(command, args = {}) {
     },
     read_file_base64: '',
     update_progress: null,
+    get_annotations: [],
+    add_annotation: null,
+    remove_annotation: null,
     toggle_favorite: null,
     update_book_metadata: null,
     remove_book: null,
@@ -202,6 +206,31 @@ async function mockCall(command, args = {}) {
       book.id === args.bookId ? { ...book, is_favorite: !book.is_favorite } : book
     ));
     return mockLibrary.find((book) => book.id === args.bookId)?.is_favorite || false;
+  }
+  if (command === 'get_annotations') {
+    return mockAnnotations.filter((annotation) => annotation.bookId === args.bookId);
+  }
+  if (command === 'add_annotation') {
+    const input = args.input || {};
+    const annotation = {
+      id: `annotation-${Date.now()}-${mockAnnotations.length}`,
+      createdAt: Math.floor(Date.now() / 1000),
+      kind: input.kind,
+      bookId: input.bookId,
+      pageIndex: input.pageIndex || 0,
+      pageCount: input.pageCount || 1,
+      spineIndex: input.spineIndex || 0,
+      progress: input.progress || 0,
+      quote: input.quote || '',
+      note: input.note || '',
+      color: input.color || 'yellow',
+    };
+    mockAnnotations = [...mockAnnotations, annotation];
+    return annotation;
+  }
+  if (command === 'remove_annotation') {
+    mockAnnotations = mockAnnotations.filter((annotation) => annotation.id !== args.annotationId);
+    return null;
   }
   if (command === 'update_book_metadata') {
     const nextTags = Array.isArray(args.tags) ? args.tags : [];

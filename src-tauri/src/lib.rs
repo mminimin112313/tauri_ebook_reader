@@ -1,4 +1,5 @@
 mod access;
+mod annotations;
 mod epub;
 mod formats;
 mod library;
@@ -6,6 +7,7 @@ mod pagination;
 mod settings;
 
 use access::LibraryAccess;
+use annotations::{AnnotationInput, AnnotationStore, ReaderAnnotation};
 use base64::{engine::general_purpose, Engine as _};
 use library::{BookEntry, Library};
 use serde::{Deserialize, Serialize};
@@ -520,6 +522,27 @@ async fn update_progress(book_id: String, progress: f32, spine_index: usize) -> 
 }
 
 #[tauri::command]
+async fn get_annotations(book_id: String) -> Result<Vec<ReaderAnnotation>, String> {
+    Ok(AnnotationStore::load().by_book(&book_id))
+}
+
+#[tauri::command]
+async fn add_annotation(input: AnnotationInput) -> Result<ReaderAnnotation, String> {
+    let mut store = AnnotationStore::load();
+    store.add(input)
+}
+
+#[tauri::command]
+async fn remove_annotation(annotation_id: String) -> Result<(), String> {
+    let mut store = AnnotationStore::load();
+    if store.remove(&annotation_id) {
+        Ok(())
+    } else {
+        Err("Annotation not found.".to_string())
+    }
+}
+
+#[tauri::command]
 async fn toggle_favorite(book_id: String) -> Result<bool, String> {
     let mut lib = Library::load();
     Ok(lib.toggle_favorite(&book_id))
@@ -1001,6 +1024,9 @@ pub fn run() {
             render_text_pages,
             get_pdf_base64,
             update_progress,
+            get_annotations,
+            add_annotation,
+            remove_annotation,
             toggle_favorite,
             update_book_metadata,
             remove_book,

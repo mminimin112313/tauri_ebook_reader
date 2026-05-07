@@ -7,8 +7,10 @@ import { ComicReader } from './ComicReader';
 import { TextReader } from './TextReader';
 import { TocPanel } from './TocPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { AnnotationPanel } from './AnnotationPanel';
 import { shouldPersistProgress } from './readerProgress.mjs';
 import { formatPageDisplay, pageIndexFromSliderValue } from './readerPaging.mjs';
+import { buildAnnotationInput } from './readerAnnotations.mjs';
 import { activeTocIndexForPage } from './readerToc';
 
 const PdfReader = lazy(() => import('./pdf/PdfReader'));
@@ -33,6 +35,10 @@ export function ReaderView({ book, backToLibrary, refresh }) {
 
   const [tocOpen,      setTocOpen]      = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [annotationsOpen, setAnnotationsOpen] = useState(false);
+  const [annotationTab, setAnnotationTab] = useState('highlights');
+  const [annotations, setAnnotations] = useState([]);
+  const [annotationError, setAnnotationError] = useState('');
   const [hudVisible,   setHudVisible]   = useState(false);
   const [toc,          setToc]          = useState([]);
   const [jumpTo,       setJumpTo]       = useState(null);
@@ -61,6 +67,27 @@ export function ReaderView({ book, backToLibrary, refresh }) {
       progressPersistRef.current.timer = null;
     }
   }, [book?.id, book?.path, book?.spine_index, settings.scroll_mode]);
+
+  const loadAnnotations = useCallback(() => {
+    if (!book?.id) return Promise.resolve([]);
+    return call('get_annotations', { bookId: book.id })
+      .then((items) => {
+        const nextItems = Array.isArray(items) ? items : [];
+        setAnnotations(nextItems);
+        setAnnotationError('');
+        return nextItems;
+      })
+      .catch((error) => {
+        setAnnotationError(error?.message || 'Could not load annotations.');
+        return [];
+      });
+  }, [book?.id]);
+
+  useEffect(() => {
+    setAnnotations([]);
+    setAnnotationError('');
+    loadAnnotations();
+  }, [loadAnnotations]);
 
   // Load EPUB TOC
   useEffect(() => {
@@ -181,6 +208,69 @@ export function ReaderView({ book, backToLibrary, refresh }) {
     handleGoToPage(pageIndexFromSliderValue(next - 1, pageDisplay.count));
   }, [handleGoToPage, pageDisplay]);
 
+  const currentSelectionText = useCallback(() => {
+    const selection = window.getSelection?.();
+    return selection?.toString?.().trim() || '';
+  }, []);
+
+  const annotationContext = useCallback((kind, extra = {}) => buildAnnotationInput({
+    kind,
+    book,
+    pageDisplay,
+    curChapter,
+    progress,
+    ...extra,
+  }), [book, curChapter, pageDisplay, progress]);
+
+  const handleAddBookmark = useCallback(() => {
+    setAnnotationError('');
+    call('add_annotation', {
+      input: annotationContext('bookmark', { color: 'blue' }),
+    })
+      .then((annotation) => {
+        setAnnotations((items) => [...items, annotation].sort((a, b) => a.pageIndex - b.pageIndex || a.createdAt - b.createdAt));
+        setAnnotationTab('bookmarks');
+        setAnnotationsOpen(true);
+      })
+      .catch((error) => setAnnotationError(error?.message || 'Could not save bookmark.'));
+  }, [annotationContext]);
+
+  const handleAddHighlight = useCallback(() => {
+    const quote = currentSelectionText();
+    const pageNumber = (pageDisplay?.index ?? 0) + 1;
+    setAnnotationError('');
+    call('add_annotation', {
+      input: annotationContext('highlight', {
+        quote,
+        note: quote ? '' : `Page ${pageNumber} highlight`,
+        color: 'yellow',
+      }),
+    })
+      .then((annotation) => {
+        window.getSelection?.()?.removeAllRanges?.();
+        setAnnotations((items) => [...items, annotation].sort((a, b) => a.pageIndex - b.pageIndex || a.createdAt - b.createdAt));
+        setAnnotationTab('highlights');
+        setAnnotationsOpen(true);
+      })
+      .catch((error) => setAnnotationError(error?.message || 'Could not save highlight.'));
+  }, [annotationContext, currentSelectionText, pageDisplay?.index]);
+
+  const handleAnnotationJump = useCallback((annotation) => {
+    if (Number.isFinite(annotation?.pageIndex)) {
+      handleGoToPage(annotation.pageIndex);
+    }
+    setAnnotationsOpen(false);
+  }, [handleGoToPage]);
+
+  const handleRemoveAnnotation = useCallback((annotation) => {
+    call('remove_annotation', { annotationId: annotation.id })
+      .then(() => {
+        setAnnotations((items) => items.filter((item) => item.id !== annotation.id));
+        setAnnotationError('');
+      })
+      .catch((error) => setAnnotationError(error?.message || 'Could not remove annotation.'));
+  }, []);
+
   const handleCanvasClick = useCallback((e) => {
     // Ignore clicks on buttons, links, or if text is selected
     if (e.target.closest('button, a, input, select')) return;
@@ -261,7 +351,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   }
 
   return (
-    <div className={`reader-view rv-${theme} ${modeClass} ${hudVisible ? 'hud-visible' : ''} ${tocOpen ? 'toc-open' : ''}`} style={{ '--r-bg': themeColor }}>
+    <div className={`reader-view rv-${theme} ${modeClass} ${hudVisible ? 'hud-visible' : ''} ${tocOpen ? 'toc-open' : ''} ${annotationsOpen ? 'annotations-open' : ''}`} style={{ '--r-bg': themeColor }}>
 
       {/* ── Top Chrome (appears on hover) ── */}
       <div className="reader-chrome-top">
@@ -273,6 +363,15 @@ export function ReaderView({ book, backToLibrary, refresh }) {
         <div className="reader-chrome-actions">
           <button className="r-icon-btn" title="Contents" onClick={() => setTocOpen(true)}>
             <Icon name="format_list_bulleted" className="ms" />
+          </button>
+          <button className="r-icon-btn annotation-action bookmark" title="Bookmark page" onClick={handleAddBookmark} aria-label="Bookmark page">
+            <Icon name="bookmark_filled" className="ms" />
+          </button>
+          <button className="r-icon-btn annotation-action highlight" title="Highlight selection" onClick={handleAddHighlight} aria-label="Highlight selection">
+            <Icon name="ink_highlighter" className="ms" />
+          </button>
+          <button className="r-icon-btn annotation-action notes" title="Highlights and notes" onClick={() => setAnnotationsOpen(true)} aria-label="Highlights and notes">
+            <Icon name="sticky_note" className="ms" />
           </button>
           <button className="r-icon-btn" title="Settings" onClick={() => setSettingsOpen(true)}>
             <Icon name="text_fields" className="ms" />
@@ -375,6 +474,15 @@ export function ReaderView({ book, backToLibrary, refresh }) {
             <button className="hud-ctrl-btn" title="Contents" onClick={() => setTocOpen(true)}>
               <Icon name="format_list_bulleted" className="ms" />
             </button>
+            <button className="hud-ctrl-btn annotation-action bookmark" title="Bookmark page" onClick={handleAddBookmark} aria-label="Bookmark page">
+              <Icon name="bookmark_filled" className="ms" />
+            </button>
+            <button className="hud-ctrl-btn annotation-action highlight" title="Highlight selection" onClick={handleAddHighlight} aria-label="Highlight selection">
+              <Icon name="ink_highlighter" className="ms" />
+            </button>
+            <button className="hud-ctrl-btn annotation-action notes" title="Highlights and notes" onClick={() => setAnnotationsOpen(true)} aria-label="Highlights and notes">
+              <Icon name="sticky_note" className="ms" />
+            </button>
             <button className="hud-ctrl-btn" title="Settings" onClick={() => setSettingsOpen(true)}>
               <Icon name="text_fields" className="ms" />
             </button>
@@ -424,6 +532,20 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           activeEntryIndex={activeTocEntryIndex}
           onJump={handleJump}
           onClose={() => setTocOpen(false)}
+          docked
+        />
+      )}
+
+      {/* Annotation Panel */}
+      {annotationsOpen && (
+        <AnnotationPanel
+          annotations={annotations}
+          activeTab={annotationTab}
+          onTabChange={setAnnotationTab}
+          onJump={handleAnnotationJump}
+          onRemove={handleRemoveAnnotation}
+          onClose={() => setAnnotationsOpen(false)}
+          error={annotationError}
           docked
         />
       )}

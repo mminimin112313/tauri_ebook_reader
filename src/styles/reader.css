@@ -81,6 +81,28 @@
   background: var(--r-line);
   color: var(--r-ink);
 }
+.r-icon-btn.annotation-action {
+  position: relative;
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+.r-icon-btn.annotation-action .ms { font-size: 17px; }
+.r-icon-btn.annotation-action.bookmark {
+  color: #ffd166;
+  background: color-mix(in srgb, #ffd166 13%, transparent);
+}
+.r-icon-btn.annotation-action.highlight {
+  color: #67e08f;
+  background: color-mix(in srgb, #67e08f 13%, transparent);
+}
+.r-icon-btn.annotation-action.notes {
+  color: #9bb7ff;
+  background: color-mix(in srgb, #9bb7ff 13%, transparent);
+}
+.r-icon-btn.annotation-action:hover {
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
+  background: color-mix(in srgb, currentColor 18%, var(--r-line));
+}
 .r-icon-btn:disabled,
 .hud-ctrl-btn:disabled {
   opacity: .45;
@@ -814,6 +836,16 @@
 }
 .hud-ctrl-btn:hover { background: var(--r-bg); color: var(--r-ink); }
 .hud-ctrl-btn .ms { font-size: 18px; }
+.hud-ctrl-btn.annotation-action {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+}
+.hud-ctrl-btn.annotation-action.bookmark { color: #ffd166; }
+.hud-ctrl-btn.annotation-action.highlight { color: #67e08f; }
+.hud-ctrl-btn.annotation-action.notes { color: #9bb7ff; }
+.hud-ctrl-btn.annotation-action:hover {
+  background: color-mix(in srgb, currentColor 16%, var(--r-bg));
+  color: currentColor;
+}
 
 .hud-theme-btn {
   width: 22px; height: 22px;
@@ -1022,6 +1054,214 @@
 .toc-entry.active .toc-entry-num {
   color: var(--r-ink);
   opacity: .9;
+}
+
+/* ── Annotation Panel ───────────────────────────────── */
+.annotation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  background: transparent;
+}
+.annotation-dock {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 38;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: auto;
+}
+.annotation-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--r-chrome) 78%, #111 22%);
+  backdrop-filter: blur(22px) saturate(1.15);
+  border-left: 1px solid color-mix(in srgb, var(--r-chrome-border) 70%, rgba(255,255,255,.18));
+  box-shadow: -10px 0 32px rgba(0,0,0,.18);
+  color: var(--r-ink);
+  animation: slideInRight .2s ease;
+}
+.annotation-panel .r-icon-btn {
+  color: rgba(255,255,255,.62);
+}
+.annotation-panel .r-icon-btn:hover {
+  color: #fff;
+  background: rgba(255,255,255,.1);
+}
+.rv-light .annotation-panel,
+.rv-sepia .annotation-panel {
+  background: rgba(28,28,27,.84);
+  border-left-color: rgba(255,255,255,.16);
+  color: #f6f3ec;
+}
+.annotation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.annotation-header h3 {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.annotation-header p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: rgba(255,255,255,.58);
+}
+.annotation-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 14px 16px 8px;
+  padding: 4px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.annotation-tab {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,.62);
+  transition: background .16s, color .16s, box-shadow .16s;
+}
+.annotation-tab .ms { font-size: 16px; }
+.annotation-tab.bookmark .ms { color: #ffd166; }
+.annotation-tab.highlight .ms { color: #67e08f; }
+.annotation-tab.active {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 6px 16px rgba(0,0,0,.14);
+}
+.annotation-error {
+  margin: 6px 16px 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #ffe1e1;
+  background: rgba(255,72,72,.16);
+  border: 1px solid rgba(255,72,72,.22);
+}
+.annotation-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px 18px;
+}
+.annotation-empty {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-align: center;
+  color: rgba(255,255,255,.6);
+}
+.annotation-empty .ms {
+  font-size: 34px;
+  color: rgba(255,255,255,.72);
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.22));
+}
+.annotation-empty strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255,255,255,.82);
+}
+.annotation-empty span {
+  max-width: 230px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.annotation-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin: 8px 0;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.08);
+  overflow: hidden;
+}
+.annotation-item:hover {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.16);
+}
+.annotation-jump {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  padding: 12px 10px 12px 12px;
+  text-align: left;
+}
+.annotation-color-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+}
+.annotation-color-dot.yellow { background: #ffd166; }
+.annotation-color-dot.green { background: #67e08f; }
+.annotation-color-dot.blue { background: #9bb7ff; }
+.annotation-color-dot.pink { background: #ff9bcf; }
+.annotation-item-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.annotation-item-meta {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.annotation-item-text,
+.annotation-item-note {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.annotation-item-note {
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+}
+.annotation-remove {
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,.42);
+}
+.annotation-remove:hover {
+  color: #ffe1e1;
+  background: rgba(255,72,72,.14);
 }
 
 /* ── Settings Panel ─────────────────────────────────── */

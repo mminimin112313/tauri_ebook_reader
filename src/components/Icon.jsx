@@ -21,6 +21,26 @@ const icons = {
       <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
     </svg>
   ),
+  bookmark_filled: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 4.5C6 3.12 7.12 2 8.5 2h7C16.88 2 18 3.12 18 4.5V22l-6-3.7L6 22V4.5z"/>
+      <path d="M9 5h6v2H9V5z" fill="rgba(255,255,255,.6)"/>
+    </svg>
+  ),
+  ink_highlighter: (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M15.7 3.3a2.2 2.2 0 0 1 3.1 0l1.9 1.9a2.2 2.2 0 0 1 0 3.1l-8.2 8.2-5-5 8.2-8.2z" fill="currentColor"/>
+      <path d="M5.8 13.2l5 5-2 2H3.2l.6-5 2-2z" fill="currentColor" opacity=".72"/>
+      <path d="M3 21h18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+  sticky_note: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M5 3h14a2 2 0 0 1 2 2v10.5L15.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+      <path d="M15 21v-5a1 1 0 0 1 1-1h5" fill="rgba(255,255,255,.55)"/>
+      <path d="M7 8h10M7 12h8" stroke="rgba(255,255,255,.75)" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
   upload_file: (
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11 8 15.01z"/>
