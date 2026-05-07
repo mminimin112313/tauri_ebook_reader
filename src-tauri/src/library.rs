@@ -25,6 +25,12 @@ pub struct BookEntry {
     pub tags: Vec<String>,
     #[serde(default)]
     pub reader_kind: String,
+    #[serde(default)]
+    pub reading_anchor_block_index: Option<usize>,
+    #[serde(default)]
+    pub reading_anchor_page_index: Option<usize>,
+    #[serde(default)]
+    pub reading_anchor_page_count: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,13 +79,46 @@ impl Library {
         entry
     }
 
-    pub fn update_progress(&mut self, book_id: &str, progress: f32, spine_index: usize) {
+    pub fn update_progress_with_anchor(
+        &mut self,
+        book_id: &str,
+        progress: f32,
+        spine_index: usize,
+        block_index: Option<usize>,
+        page_index: Option<usize>,
+        page_count: Option<usize>,
+    ) {
+        if self.update_progress_with_anchor_without_saving(
+            book_id,
+            progress,
+            spine_index,
+            block_index,
+            page_index,
+            page_count,
+        ) {
+            self.save();
+        }
+    }
+
+    fn update_progress_with_anchor_without_saving(
+        &mut self,
+        book_id: &str,
+        progress: f32,
+        spine_index: usize,
+        block_index: Option<usize>,
+        page_index: Option<usize>,
+        page_count: Option<usize>,
+    ) -> bool {
         if let Some(book) = self.books.iter_mut().find(|b| b.id == book_id) {
             book.progress = progress;
             book.spine_index = spine_index;
+            book.reading_anchor_block_index = block_index;
+            book.reading_anchor_page_index = page_index;
+            book.reading_anchor_page_count = page_count;
             book.last_read = Some(current_timestamp());
-            self.save();
+            return true;
         }
+        false
     }
 
     pub fn toggle_favorite(&mut self, book_id: &str) -> bool {
@@ -146,4 +185,57 @@ pub fn current_timestamp() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BookEntry, Library};
+
+    fn book(id: &str) -> BookEntry {
+        BookEntry {
+            id: id.to_string(),
+            path: "mock.txt".to_string(),
+            source_path: None,
+            title: "Mock".to_string(),
+            author: String::new(),
+            cover_base64: None,
+            file_type: "TXT".to_string(),
+            progress: 0.0,
+            spine_index: 0,
+            date_added: 0,
+            last_read: None,
+            is_favorite: false,
+            description: String::new(),
+            format_label: "TXT".to_string(),
+            category: "Document".to_string(),
+            tags: Vec::new(),
+            reader_kind: "document".to_string(),
+            reading_anchor_block_index: None,
+            reading_anchor_page_index: None,
+            reading_anchor_page_count: None,
+        }
+    }
+
+    #[test]
+    fn progress_update_persists_reflow_anchor() {
+        let mut library = Library {
+            books: vec![book("book-a")],
+        };
+
+        library.update_progress_with_anchor_without_saving(
+            "book-a",
+            0.4,
+            2,
+            Some(42),
+            Some(7),
+            Some(120),
+        );
+        let updated = &library.books[0];
+
+        assert_eq!(updated.progress, 0.4);
+        assert_eq!(updated.spine_index, 2);
+        assert_eq!(updated.reading_anchor_block_index, Some(42));
+        assert_eq!(updated.reading_anchor_page_index, Some(7));
+        assert_eq!(updated.reading_anchor_page_count, Some(120));
+    }
 }

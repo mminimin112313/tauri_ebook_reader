@@ -46,6 +46,9 @@ function mockBook(overrides = {}) {
     reader_kind: overrides.reader_kind || 'document',
     progress: overrides.progress || 0,
     spine_index: overrides.spine_index || 0,
+    reading_anchor_block_index: overrides.reading_anchor_block_index ?? null,
+    reading_anchor_page_index: overrides.reading_anchor_page_index ?? null,
+    reading_anchor_page_count: overrides.reading_anchor_page_count ?? null,
     date_added: overrides.date_added || Date.now() / 1000,
     is_favorite: overrides.is_favorite || false,
     description: overrides.description || '',
@@ -207,6 +210,19 @@ async function mockCall(command, args = {}) {
       book.id === args.bookId ? { ...book, is_favorite: !book.is_favorite } : book
     ));
     return mockLibrary.find((book) => book.id === args.bookId)?.is_favorite || false;
+  }
+  if (command === 'update_progress') {
+    mockLibrary = mockLibrary.map((book) => (
+      book.id === args.bookId ? {
+        ...book,
+        progress: args.progress || 0,
+        spine_index: args.spineIndex || 0,
+        reading_anchor_block_index: args.blockIndex ?? null,
+        reading_anchor_page_index: args.pageIndex ?? null,
+        reading_anchor_page_count: args.pageCount ?? null,
+      } : book
+    ));
+    return null;
   }
   if (command === 'get_annotations') {
     return mockAnnotations.filter((annotation) => annotation.bookId === args.bookId);

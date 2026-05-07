@@ -14,6 +14,22 @@ export function pageAnchorFromPage(page, fallbackIndex = 0, fallbackCount = 1) {
   };
 }
 
+export function pageAnchorFromBook(book) {
+  if (!book) return null;
+  const hasBlock = book.reading_anchor_block_index != null;
+  const hasPage = book.reading_anchor_page_index != null;
+  if (!hasBlock && !hasPage) return null;
+  const blockIndex = Number(book.reading_anchor_block_index);
+  const pageIndex = Number(book.reading_anchor_page_index);
+  const pageCount = Number(book.reading_anchor_page_count);
+  if (!Number.isFinite(blockIndex) && !Number.isFinite(pageIndex)) return null;
+  return {
+    blockIndex: Number.isFinite(blockIndex) ? blockIndex : null,
+    pageIndex: Number.isFinite(pageIndex) ? Math.max(0, pageIndex) : 0,
+    pageCount: Number.isFinite(pageCount) ? Math.max(1, pageCount) : 1,
+  };
+}
+
 export function selectPageForAnchor(pages, anchor) {
   const pageCount = Math.max(1, pages?.length || 0);
   if (!pages?.length) return 0;

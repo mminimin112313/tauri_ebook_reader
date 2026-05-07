@@ -515,9 +515,23 @@ async fn get_pdf_base64(path: String) -> Result<String, String> {
 // ─── Progress / Library management ──────────────────────────────────────────
 
 #[tauri::command]
-async fn update_progress(book_id: String, progress: f32, spine_index: usize) -> Result<(), String> {
+async fn update_progress(
+    book_id: String,
+    progress: f32,
+    spine_index: usize,
+    block_index: Option<usize>,
+    page_index: Option<usize>,
+    page_count: Option<usize>,
+) -> Result<(), String> {
     let mut lib = Library::load();
-    lib.update_progress(&book_id, progress, spine_index);
+    lib.update_progress_with_anchor(
+        &book_id,
+        progress,
+        spine_index,
+        block_index,
+        page_index,
+        page_count,
+    );
     Ok(())
 }
 
@@ -635,6 +649,9 @@ fn book_entry_from_paths(source_path: &str, cached_path: String) -> BookEntry {
         reader_kind: fmt.reader_kind,
         progress: 0.0,
         spine_index: 0,
+        reading_anchor_block_index: None,
+        reading_anchor_page_index: None,
+        reading_anchor_page_count: None,
         date_added: 0,
         last_read: None,
         is_favorite: false,

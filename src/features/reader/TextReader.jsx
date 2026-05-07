@@ -4,7 +4,7 @@ import { call } from '../../api/tauri';
 import { composeHybridPages } from './hybridLayout';
 import { HybridCanvasPage } from './HybridCanvasPage';
 import { useNativePageControls } from './useNativePageControls';
-import { pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
+import { pageAnchorFromBook, pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
 import { attachPageTargetsToToc, tocFromHtml, tocFromLayoutBlocks } from './readerToc';
 import { quotedReaderFontFamily, readingMeasureWidth } from './readerGeometry.js';
 
@@ -33,12 +33,12 @@ export const TextReader = forwardRef(function TextReader({ book, settings, jumpT
     setError('');
     setNativePages(null);
     setLayoutDoc(null);
-    const sameBook = previousBookPathRef.current === book.path;
     const previousPages = nativePagesRef.current?.pages || [];
+    const sameBook = previousBookPathRef.current === book.path && previousPages.length > 0;
     const previousIndex = sameBook ? nativePageIndexRef.current : 0;
     pendingAnchorRef.current = sameBook
       ? pageAnchorFromPage(previousPages[previousIndex], previousIndex, previousPages.length)
-      : null;
+      : pageAnchorFromBook(book);
     previousBookPathRef.current = book.path;
     if (pageMode) {
       let cancelFullLoad = null;
@@ -101,7 +101,9 @@ export const TextReader = forwardRef(function TextReader({ book, settings, jumpT
       nativePageIndexRef.current,
       nativePagesRef.current?.pages?.length || 1,
     );
-    const anchor = anchorFromCurrent?.blockIndex != null ? anchorFromCurrent : pendingAnchorRef.current;
+    const anchor = nativePagesRef.current?.pending && pendingAnchorRef.current?.blockIndex != null
+      ? pendingAnchorRef.current
+      : (anchorFromCurrent?.blockIndex != null ? anchorFromCurrent : pendingAnchorRef.current);
     const tocEntries = tocFromLayoutBlocks(layoutDoc.blocks, { title });
     const isPreview = layoutDoc.preview === true;
     let cancelled = false;
@@ -115,6 +117,9 @@ export const TextReader = forwardRef(function TextReader({ book, settings, jumpT
       setNativePages({ ...layoutDoc, pages, pending });
       setNativePageIndex(selectedIndex);
       setPageInfo({ index: selectedIndex, count: Math.max(1, pages.length), pending });
+      if (!pending) {
+        pendingAnchorRef.current = pageAnchorFromPage(pages[selectedIndex], selectedIndex, pages.length);
+      }
       setLoading(false);
     };
 
@@ -275,8 +280,9 @@ export const TextReader = forwardRef(function TextReader({ book, settings, jumpT
   useEffect(() => {
     if (!pageMode || !nativePages?.pages?.length) return;
     const count = nativePages.pages.length;
+    const anchor = pageAnchorFromPage(nativePages.pages[nativePageIndex], nativePageIndex, count);
     onPageInfo?.({ index: nativePageIndex, count, pending: Boolean(nativePages.pending) });
-    onProgress(0, 1, nativePageIndex / Math.max(1, count - 1));
+    onProgress(0, 1, nativePageIndex / Math.max(1, count - 1), anchor);
   }, [pageMode, nativePages, nativePageIndex, onProgress, onPageInfo]);
 
   const maxW = readingMeasureWidth(settings);

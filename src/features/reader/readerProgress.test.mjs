@@ -22,3 +22,12 @@ assert.equal(shouldPersistProgress({
   lastProgress: 0.1,
   lastSpineIndex: 2,
 }), true, 'chapter changes are persisted even when percent barely changes');
+
+assert.equal(shouldPersistProgress({
+  nextProgress: 0.1001,
+  nextSpineIndex: 0,
+  nextBlockIndex: 24,
+  lastProgress: 0.1,
+  lastSpineIndex: 0,
+  lastBlockIndex: 20,
+}), true, 'block anchor changes are persisted even when percent barely changes');

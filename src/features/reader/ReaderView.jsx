@@ -11,6 +11,7 @@ import { AnnotationPanel } from './AnnotationPanel';
 import { shouldPersistProgress } from './readerProgress.mjs';
 import { formatPageDisplay, pageIndexFromSliderValue } from './readerPaging.mjs';
 import { buildAnnotationInput } from './readerAnnotations.mjs';
+import { mergeBookPosition, readCachedBookPosition, writeCachedBookPosition } from './readerPositionCache.mjs';
 import { activeTocIndexForPage } from './readerToc';
 
 const PdfReader = lazy(() => import('./pdf/PdfReader'));
@@ -32,6 +33,8 @@ function isComic(ft) { return COMIC_LIKE.has(ft); }
 
 export function ReaderView({ book, backToLibrary, refresh }) {
   const { settings, ready: settingsReady, update: updateSettings, save: saveSettings } = useSettings();
+  const cachedBookPosition = useMemo(() => readCachedBookPosition(book?.id), [book?.id]);
+  const readingBook = useMemo(() => mergeBookPosition(book, cachedBookPosition), [book, cachedBookPosition]);
 
   const [tocOpen,      setTocOpen]      = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -43,31 +46,33 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   const [hudVisible,   setHudVisible]   = useState(false);
   const [toc,          setToc]          = useState([]);
   const [jumpTo,       setJumpTo]       = useState(null);
-  const [progress,     setProgress]     = useState(book?.progress || 0);
-  const [curChapter,   setCurChapter]   = useState(book?.spine_index || 0);
+  const [progress,     setProgress]     = useState(readingBook?.progress || 0);
+  const [curChapter,   setCurChapter]   = useState(readingBook?.spine_index || 0);
   const [totalChaps,   setTotalChaps]   = useState(1);
   const [pageDisplay,  setPageDisplay]  = useState(null);
   const readerRef = useRef(null);
   const progressPersistRef = useRef({
-    lastProgress: book?.progress || 0,
-    lastSpineIndex: book?.spine_index || 0,
+    lastProgress: readingBook?.progress || 0,
+    lastSpineIndex: readingBook?.spine_index || 0,
+    lastBlockIndex: readingBook?.reading_anchor_block_index ?? null,
     timer: null,
     queued: null,
   });
-  const fileType = book?.file_type;
+  const fileType = readingBook?.file_type;
 
   useEffect(() => {
     setPageDisplay(null);
-    setProgress(book?.progress || 0);
-    setCurChapter(book?.spine_index || 0);
-    progressPersistRef.current.lastProgress = book?.progress || 0;
-    progressPersistRef.current.lastSpineIndex = book?.spine_index || 0;
+    setProgress(readingBook?.progress || 0);
+    setCurChapter(readingBook?.spine_index || 0);
+    progressPersistRef.current.lastProgress = readingBook?.progress || 0;
+    progressPersistRef.current.lastSpineIndex = readingBook?.spine_index || 0;
+    progressPersistRef.current.lastBlockIndex = readingBook?.reading_anchor_block_index ?? null;
     progressPersistRef.current.queued = null;
     if (progressPersistRef.current.timer) {
       window.clearTimeout(progressPersistRef.current.timer);
       progressPersistRef.current.timer = null;
     }
-  }, [book?.id, book?.path, book?.spine_index, settings.scroll_mode]);
+  }, [readingBook?.id, readingBook?.path, readingBook?.spine_index, readingBook?.reading_anchor_block_index, settings.scroll_mode]);
 
   const loadAnnotations = useCallback(() => {
     if (!book?.id) return Promise.resolve([]);
@@ -94,21 +99,26 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   // Load EPUB TOC
   useEffect(() => {
     if (isEpub(fileType)) {
-      call('get_epub_meta', { path: book.path })
+      call('get_epub_meta', { path: readingBook.path })
         .then((meta) => setToc(meta.toc || []))
         .catch(() => {});
     }
-  }, [book, fileType]);
+  }, [readingBook, fileType]);
 
   const persistProgress = useCallback((payload, refreshLibrary = false) => {
     const state = progressPersistRef.current;
     state.lastProgress = payload.progress;
     state.lastSpineIndex = payload.spineIndex;
+    state.lastBlockIndex = payload.blockIndex ?? null;
     state.queued = null;
+    writeCachedBookPosition(book.id, payload);
     call('update_progress', {
       bookId: book.id,
       progress: payload.progress,
       spineIndex: payload.spineIndex,
+      blockIndex: payload.blockIndex ?? null,
+      pageIndex: payload.pageIndex ?? null,
+      pageCount: payload.pageCount ?? null,
     })
       .then(() => { if (refreshLibrary) refresh(); })
       .catch(() => {});
@@ -119,8 +129,10 @@ export function ReaderView({ book, backToLibrary, refresh }) {
     if (!shouldPersistProgress({
       nextProgress: payload.progress,
       nextSpineIndex: payload.spineIndex,
+      nextBlockIndex: payload.blockIndex,
       lastProgress: state.lastProgress,
       lastSpineIndex: state.lastSpineIndex,
+      lastBlockIndex: state.lastBlockIndex,
     })) return;
 
     state.queued = payload;
@@ -141,7 +153,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
     else if (refreshLibrary) refresh();
   }, [persistProgress, refresh]);
 
-  const handleProgress = useCallback((chapterIdx, total, scrollPct) => {
+  const handleProgress = useCallback((chapterIdx, total, scrollPct, anchor = null) => {
     setTotalChaps(total);
     setCurChapter(chapterIdx);
     const localPct = scrollPct ?? 1;
@@ -150,7 +162,13 @@ export function ReaderView({ book, backToLibrary, refresh }) {
       : Math.min(localPct, 1);
     const boundedProgress = Math.min(1, Math.max(0, prog));
     setProgress(boundedProgress);
-    scheduleProgressPersist({ progress: boundedProgress, spineIndex: chapterIdx });
+    scheduleProgressPersist({
+      progress: boundedProgress,
+      spineIndex: chapterIdx,
+      blockIndex: anchor?.blockIndex,
+      pageIndex: anchor?.pageIndex,
+      pageCount: anchor?.pageCount,
+    });
   }, [scheduleProgressPersist]);
 
   useEffect(() => () => {
@@ -334,7 +352,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
   // Chapter label for HUD
   const chapterLabel = isEpub(fileType) && toc.length > 0
     ? (toc.find((t) => t.index === curChapter)?.title || `Chapter ${curChapter + 1}`)
-    : book?.title;
+    : readingBook?.title;
 
   // Chapter markers for progress bar
   const chapterMarkers = isEpub(fileType) && totalChaps > 1
@@ -400,7 +418,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
         {isEpub(fileType) && (
           <EpubReader
             ref={readerRef}
-            book={book}
+            book={readingBook}
             settings={readerSettings}
             jumpTo={jumpTo}
             annotations={annotations}
@@ -420,7 +438,7 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           }>
             <PdfReader
               ref={readerRef}
-              book={book}
+              book={readingBook}
               settings={readerSettings}
               onProgress={handleProgress}
               onPageInfo={handlePageInfo}
@@ -429,10 +447,10 @@ export function ReaderView({ book, backToLibrary, refresh }) {
           </Suspense>
         )}
         {isComic(fileType) && (
-          <ComicReader ref={readerRef} book={book} settings={readerSettings} onProgress={handleProgress} onPageInfo={handlePageInfo} />
+          <ComicReader ref={readerRef} book={readingBook} settings={readerSettings} onProgress={handleProgress} onPageInfo={handlePageInfo} />
         )}
         {!isEpub(fileType) && !isPdf(fileType) && !isComic(fileType) && (
-          <TextReader ref={readerRef} book={book} settings={readerSettings} jumpTo={jumpTo} annotations={annotations} selection={canvasSelection} onTextSelectionChange={setCanvasSelection} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
+          <TextReader ref={readerRef} book={readingBook} settings={readerSettings} jumpTo={jumpTo} annotations={annotations} selection={canvasSelection} onTextSelectionChange={setCanvasSelection} onProgress={handleProgress} onPageInfo={handlePageInfo} onToc={handleReaderToc} />
         )}
       </div>
 

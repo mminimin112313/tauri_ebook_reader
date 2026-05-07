@@ -4,7 +4,7 @@ import { call } from '../../api/tauri';
 import { composeHybridPages } from './hybridLayout';
 import { HybridCanvasPage } from './HybridCanvasPage';
 import { useNativePageControls } from './useNativePageControls';
-import { pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
+import { pageAnchorFromBook, pageAnchorFromPage, selectPageForAnchor } from './pagePosition.mjs';
 import { attachPageTargetsToToc, tocFromLayoutBlocks } from './readerToc';
 import { readerCssVars } from './readerGeometry.js';
 
@@ -105,12 +105,12 @@ export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpT
     }
 
     let cancelled = false;
-    const sameBook = previousBookPathRef.current === book.path;
     const previousPages = nativePagesRef.current?.pages || [];
+    const sameBook = previousBookPathRef.current === book.path && previousPages.length > 0;
     const previousIndex = sameBook ? nativePageIndexRef.current : 0;
     pendingAnchorRef.current = sameBook
       ? pageAnchorFromPage(previousPages[previousIndex], previousIndex, previousPages.length)
-      : null;
+      : pageAnchorFromBook(book);
     previousBookPathRef.current = book.path;
     async function loadPages() {
       setLoading(true);
@@ -157,7 +157,9 @@ export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpT
       nativePageIndexRef.current,
       nativePagesRef.current?.pages?.length || 1,
     );
-    const anchor = anchorFromCurrent?.blockIndex != null ? anchorFromCurrent : pendingAnchorRef.current;
+    const anchor = nativePagesRef.current?.pending && pendingAnchorRef.current?.blockIndex != null
+      ? pendingAnchorRef.current
+      : (anchorFromCurrent?.blockIndex != null ? anchorFromCurrent : pendingAnchorRef.current);
     const tocEntries = tocFromLayoutBlocks(layoutDoc.blocks, { title });
     const isPreview = layoutDoc.preview === true;
     let cancelled = false;
@@ -173,6 +175,9 @@ export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpT
       setNativePageIndex(selectedIndex);
       setTotal(chapterCount);
       setPageInfo({ index: selectedIndex, count: Math.max(1, pages.length), pending });
+      if (!pending) {
+        pendingAnchorRef.current = pageAnchorFromPage(pages[selectedIndex], selectedIndex, pages.length);
+      }
       setLoading(false);
     };
 
@@ -401,8 +406,9 @@ export const EpubReader = forwardRef(function EpubReader({ book, settings, jumpT
     if (!page) return;
     progressRef.current.index = page.chapter_index || 0;
     const count = nativePages.pages.length;
+    const anchor = pageAnchorFromPage(page, nativePageIndex, count);
     onPageInfo?.({ index: nativePageIndex, count, pending: Boolean(nativePages.pending) });
-    onProgress(page.chapter_index || 0, nativePages.chapterCount || 1, nativePageIndex / Math.max(1, count - 1));
+    onProgress(page.chapter_index || 0, nativePages.chapterCount || 1, nativePageIndex / Math.max(1, count - 1), anchor);
   }, [pageMode, nativePages, nativePageIndex, onProgress, onPageInfo]);
 
   const cssVars = {
